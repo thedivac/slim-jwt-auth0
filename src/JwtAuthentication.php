@@ -146,7 +146,12 @@ final class JwtAuthentication implements MiddlewareInterface
         /* If token cannot be found or decoded return with 401 Unauthorized. */
         try {
             $token = $this->fetchToken($request);
-            $decoded = $this->decodeToken($token);
+            $jwksUri = $this->options["auth0_domain"] . '.well-known/jwks.json';
+            $jwksFetcher = new JWKFetcher(null, [ 'base_uri' => $jwksUri ]);
+            $signatureVerifier = new AsymmetricVerifier($jwksFetcher);
+            $tokenVerifier = new TokenVerifier($this->options["auth0_domain"], $this->options["auth0_audience"], $signatureVerifier);
+            $decoded = $tokenVerifier->verify($token);
+
         } catch (RuntimeException | DomainException $exception) {
             $response = (new ResponseFactory)->createResponse(401);
             return $this->processError($response, [
