@@ -1,6 +1,6 @@
 {
-    "name": "tuupola/slim-jwt-auth",
-    "description": "PSR-7 and PSR-15 JWT Authentication Middleware",
+    "name": "thedivac/slim-jwt-auth",
+    "description": "PSR-7 and PSR-15 JWT Authentication Middleware for Auth0",
     "keywords": [
         "psr-7",
         "psr-15",
