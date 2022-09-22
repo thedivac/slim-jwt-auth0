@@ -52,6 +52,10 @@ use Tuupola\Http\Factory\ResponseFactory;
 use Tuupola\Middleware\JwtAuthentication\RequestMethodRule;
 use Tuupola\Middleware\JwtAuthentication\RequestPathRule;
 use Tuupola\Middleware\JwtAuthentication\RuleInterface;
+use Auth0\SDK\Exception\InvalidTokenException;
+use Auth0\SDK\Helpers\JWKFetcher;
+use Auth0\SDK\Helpers\Tokens\AsymmetricVerifier;
+use Auth0\SDK\Helpers\Tokens\TokenVerifier;
 
 final class JwtAuthentication implements MiddlewareInterface
 {
