@@ -39,6 +39,8 @@ use DomainException;
 use InvalidArgumentException;
 use Exception;
 use Firebase\JWT\JWT;
+use Firebase\JWT\CachedKeySet;
+
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -52,10 +54,16 @@ use Tuupola\Http\Factory\ResponseFactory;
 use Tuupola\Middleware\JwtAuthentication\RequestMethodRule;
 use Tuupola\Middleware\JwtAuthentication\RequestPathRule;
 use Tuupola\Middleware\JwtAuthentication\RuleInterface;
-use Auth0\SDK\Exception\InvalidTokenException;
+use GuzzleHttp\Psr7\Utils;
+use Firebase\JWT\JWK;
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
+
+/*
 use Auth0\SDK\Helpers\JWKFetcher;
 use Auth0\SDK\Helpers\Tokens\AsymmetricVerifier;
-use Auth0\SDK\Helpers\Tokens\TokenVerifier;
+use Auth0\SDK\Helpers\Tokens\TokenVerifier;*/
+
+
 
 final class JwtAuthentication implements MiddlewareInterface
 {
@@ -151,21 +159,36 @@ final class JwtAuthentication implements MiddlewareInterface
         try {
             $token = $this->fetchToken($request);
             $jwksUri = $this->options["auth0_domain"] . '.well-known/jwks.json';
+
+            $keySet = new CachedKeySet(
+                $jwksUri, // your JWK URI
+                new \GuzzleHttp\Client(),                        // your PSR-7 HTTP client
+                new \GuzzleHttp\Psr7\HttpFactory(),                    // your PSR-18 HTTP factory
+                new FilesystemAdapter()      // your PSR-6 Cache client
+            );
+
+            $decoded = (array) JWT::decode($token, $keySet);
+           
+            /*
+            $token = $this->fetchToken($request);
+          
             $jwksFetcher = new JWKFetcher(null, [ 'base_uri' => $jwksUri ]);
             $signatureVerifier = new AsymmetricVerifier($jwksFetcher);
             $tokenVerifier = new TokenVerifier($this->options["auth0_domain"], $this->options["auth0_audience"], $signatureVerifier);
-            $decoded = $tokenVerifier->verify($token);
+            $decoded = $tokenVerifier->verify($token); */
 
         } catch (RuntimeException | DomainException $exception) {
+
+            
             $response = (new ResponseFactory)->createResponse(401);
             return $this->processError($response, [
                 "message" => $exception->getMessage(),
-                "uri" => (string)$request->getUri()
+                "uri" => (string) $request->getUri()
             ]);
         }
 
         $params = [
-            "decoded" => $decoded,
+            "decoded" =>  $decoded,
             "token" => $token,
         ];
 
@@ -279,7 +302,8 @@ final class JwtAuthentication implements MiddlewareInterface
                 return $matches[1];
             }
             return $cookieParams[$this->options["cookie"]];
-        };
+        }
+        ;
 
         /* If everything fails log and throw. */
         $this->log(LogLevel::WARNING, "Token not found");
@@ -382,7 +406,7 @@ final class JwtAuthentication implements MiddlewareInterface
      */
     private function secret($secret): void
     {
-        if (false === is_array($secret) && false === is_string($secret) && ! $secret instanceof \ArrayAccess) {
+        if (false === is_array($secret) && false === is_string($secret) && !$secret instanceof \ArrayAccess) {
             throw new InvalidArgumentException(
                 'Secret must be either a string or an array of "kid" => "secret" pairs'
             );
